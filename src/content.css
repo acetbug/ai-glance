@@ -1,0 +1,279 @@
+/* ========================================
+   AI Glance — 注入样式
+   ======================================== */
+
+/* ── 复制按钮 ── */
+.aig-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  white-space: nowrap;
+}
+
+.aig-copy-btn:hover {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.15);
+}
+
+.aig-copy-btn:active {
+  transform: scale(0.96);
+}
+
+.aig-copy-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+.aig-copy-btn svg {
+  flex-shrink: 0;
+}
+
+.aig-copy-btn.aig-loading .aig-copy-btn-text {
+  animation: aig-pulse 1s ease-in-out infinite;
+}
+
+.aig-copy-btn.aig-success {
+  color: #22c55e;
+}
+
+.aig-copy-btn.aig-error {
+  color: #ef4444;
+}
+
+.aig-copy-btn-standalone {
+  display: flex;
+  justify-content: flex-start;
+  padding: 6px 0;
+}
+
+/* ── 风格选择器弹出框 ── */
+.aig-style-picker {
+  position: fixed;
+  z-index: 99999;
+  width: 360px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: #1a1a1a;
+  padding: 16px;
+  animation: aig-fadeIn 0.15s ease-out;
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .aig-style-picker {
+    background: #1e1e2e;
+    border-color: #45475a;
+    color: #cdd6f4;
+  }
+  .aig-preset-card:hover {
+    background: #313244 !important;
+  }
+  .aig-custom-title {
+    color: #bac2de !important;
+  }
+  .aig-confirm-btn {
+    background: #89b4fa !important;
+    color: #1e1e2e !important;
+  }
+  .aig-confirm-btn:hover {
+    background: #74a8f7 !important;
+  }
+}
+
+.aig-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.aig-picker-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.aig-picker-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.5;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.aig-picker-close:hover {
+  opacity: 1;
+}
+
+/* ── 预设网格 ── */
+.aig-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.aig-preset-card {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 6px;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.aig-preset-card:hover {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.aig-preset-card.aig-selected {
+  border-color: #4a90d9;
+}
+
+.aig-preset-preview {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 6px;
+  padding: 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.aig-preset-name {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ── 自定义颜色 ── */
+.aig-custom-section {
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  padding-top: 12px;
+  margin-bottom: 14px;
+}
+
+.aig-custom-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #6b7280;
+}
+
+.aig-custom-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.aig-custom-row label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.aig-custom-row input[type="color"] {
+  -webkit-appearance: none;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 1px;
+  cursor: pointer;
+}
+
+.aig-custom-row input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 1px;
+}
+
+.aig-custom-row input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+
+/* ── 底部操作 ── */
+.aig-picker-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  padding-top: 12px;
+}
+
+.aig-save-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.aig-save-check {
+  cursor: pointer;
+}
+
+.aig-confirm-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #4a90d9;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.aig-confirm-btn:hover {
+  background: #3a7bc8;
+}
+
+.aig-confirm-btn:active {
+  transform: scale(0.97);
+}
+
+/* ── 动画 ── */
+@keyframes aig-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes aig-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}

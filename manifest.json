@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "AI Glance - AI对话截图",
+  "version": "0.1.0",
+  "description": "一键将AI对话导出为精美风格化图片",
+  "permissions": ["clipboardWrite", "storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*",
+        "https://copilot.microsoft.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

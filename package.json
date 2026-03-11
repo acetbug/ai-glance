@@ -1,0 +1,17 @@
+{
+  "name": "ai-glance",
+  "version": "0.1.0",
+  "description": "一键将AI对话导出为精美图片的浏览器扩展",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  }
+}
