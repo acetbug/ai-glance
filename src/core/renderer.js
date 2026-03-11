@@ -1,41 +1,46 @@
 import html2canvas from "html2canvas";
 
 /**
- * 渲染器 — 将提取的对话内容按选定风格渲染为图片
+ * 渲染器 — 将选中的 turn 内容按选定风格渲染为图片
  *
  * 流程: 构建 styled HTML → 插入隐藏容器 → html2canvas 截图 → Blob
  */
 export class Renderer {
   /**
-   * 将对话内容渲染为图片 Blob
-   * @param {{ promptText: string, responseHTML: string }} content
+   * 将多个 turn 的 HTML 渲染为图片 Blob
+   * @param {string[]} turnHTMLs 每个 turn 的 HTML 内容
    * @param {object} style 风格配置
    * @returns {Promise<Blob>}
    */
-  async render(content, style) {
-    const container = this.buildContainer(content, style);
+  async render(turnHTMLs, style) {
+    const container = this.buildContainer(turnHTMLs, style);
 
-    // 插入到页面（必须在 DOM 中才能让 html2canvas 正常工作）
     document.body.appendChild(container);
 
     try {
-      // 等待内部图片等资源加载
-      await this.waitForImages(container);
+      // 加载图片与 html2canvas 前置准备可并行
+      const imgReady = this.waitForImages(container);
+
+      // 让浏览器完成一次布局
+      await new Promise((r) => requestAnimationFrame(r));
+      await imgReady;
 
       const canvas = await html2canvas(container, {
-        backgroundColor: null, // 使用容器自己的背景色
-        scale: 2, // 高清输出
+        backgroundColor: null,
+        scale: window.devicePixelRatio > 1 ? 1.5 : 2,
         useCORS: true,
         logging: false,
         width: container.offsetWidth,
         height: container.offsetHeight,
+        windowWidth: container.offsetWidth,
       });
 
       return new Promise((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error("Canvas toBlob failed"));
-        }, "image/png");
+        canvas.toBlob(
+          (blob) =>
+            blob ? resolve(blob) : reject(new Error("Canvas toBlob failed")),
+          "image/png",
+        );
       });
     } finally {
       container.remove();
@@ -45,7 +50,7 @@ export class Renderer {
   /**
    * 构建带样式的渲染容器
    */
-  buildContainer(content, style) {
+  buildContainer(turnHTMLs, style) {
     const container = document.createElement("div");
     container.className = "aig-render-container";
     Object.assign(container.style, {
@@ -53,7 +58,7 @@ export class Renderer {
       left: "-9999px",
       top: "0",
       zIndex: "-1",
-      width: "680px",
+      width: "420px",
       background: style.bg,
       color: style.text,
       fontFamily: style.fontFamily,
@@ -64,62 +69,23 @@ export class Renderer {
       overflow: "hidden",
     });
 
-    // Prompt 区域
-    if (content.promptText) {
-      const promptSection = document.createElement("div");
-      promptSection.className = "aig-prompt-section";
-      Object.assign(promptSection.style, {
-        background: style.promptBg,
-        border: `1px solid ${style.promptBorder}`,
-        borderRadius: "8px",
-        padding: "16px 20px",
-        marginBottom: "20px",
-        color: style.promptText,
-        fontSize: "14px",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-      });
+    turnHTMLs.forEach((html, i) => {
+      const section = document.createElement("div");
+      section.innerHTML = html;
+      this.applyTurnStyles(section, style);
+      container.appendChild(section);
 
-      // Prompt 标签
-      const label = document.createElement("div");
-      Object.assign(label.style, {
-        fontSize: "12px",
-        fontWeight: "600",
-        color: style.accent,
-        marginBottom: "8px",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-      });
-      label.textContent = "PROMPT";
-      promptSection.appendChild(label);
-
-      const promptBody = document.createElement("div");
-      promptBody.textContent = content.promptText;
-      promptSection.appendChild(promptBody);
-
-      container.appendChild(promptSection);
-    }
-
-    // 分隔线
-    const divider = document.createElement("div");
-    Object.assign(divider.style, {
-      height: "1px",
-      background: style.codeBorder,
-      margin: "0 0 20px 0",
+      if (i < turnHTMLs.length - 1) {
+        const divider = document.createElement("div");
+        Object.assign(divider.style, {
+          height: "1px",
+          background: style.codeBorder,
+          margin: "20px 0",
+        });
+        container.appendChild(divider);
+      }
     });
-    container.appendChild(divider);
 
-    // AI 回复区域
-    const responseSection = document.createElement("div");
-    responseSection.className = "aig-response-section";
-    responseSection.innerHTML = content.responseHTML;
-
-    // 应用回复区域的内部样式
-    this.applyResponseStyles(responseSection, style);
-
-    container.appendChild(responseSection);
-
-    // 水印 / 底部标识
     if (style.watermark) {
       const watermark = document.createElement("div");
       Object.assign(watermark.style, {
@@ -139,15 +105,13 @@ export class Renderer {
   }
 
   /**
-   * 对响应 HTML 内部元素应用自定义样式
+   * 对 turn 内部元素应用自定义样式
    */
-  applyResponseStyles(el, style) {
-    // 段落
+  applyTurnStyles(el, style) {
     el.querySelectorAll("p").forEach((p) => {
       Object.assign(p.style, { margin: "0 0 12px 0" });
     });
 
-    // 标题
     el.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((h) => {
       Object.assign(h.style, {
         color: style.text,
@@ -157,7 +121,6 @@ export class Renderer {
       });
     });
 
-    // 代码块
     el.querySelectorAll("pre").forEach((pre) => {
       Object.assign(pre.style, {
         background: style.codeBg,
@@ -175,7 +138,6 @@ export class Renderer {
       });
     });
 
-    // 行内代码
     el.querySelectorAll("code").forEach((code) => {
       if (code.parentElement?.tagName !== "PRE") {
         Object.assign(code.style, {
@@ -189,7 +151,6 @@ export class Renderer {
       }
     });
 
-    // 列表
     el.querySelectorAll("ul,ol").forEach((list) => {
       Object.assign(list.style, {
         paddingLeft: "24px",
@@ -201,7 +162,6 @@ export class Renderer {
       Object.assign(li.style, { margin: "4px 0" });
     });
 
-    // 引用块
     el.querySelectorAll("blockquote").forEach((bq) => {
       Object.assign(bq.style, {
         borderLeft: `3px solid ${style.accent}`,
@@ -212,7 +172,6 @@ export class Renderer {
       });
     });
 
-    // 链接
     el.querySelectorAll("a").forEach((a) => {
       Object.assign(a.style, {
         color: style.accent,
@@ -220,7 +179,6 @@ export class Renderer {
       });
     });
 
-    // 表格
     el.querySelectorAll("table").forEach((table) => {
       Object.assign(table.style, {
         borderCollapse: "collapse",
@@ -229,6 +187,7 @@ export class Renderer {
         fontSize: "14px",
       });
     });
+
     el.querySelectorAll("th").forEach((th) => {
       Object.assign(th.style, {
         background: style.codeBg,
@@ -238,6 +197,7 @@ export class Renderer {
         textAlign: "left",
       });
     });
+
     el.querySelectorAll("td").forEach((td) => {
       Object.assign(td.style, {
         border: `1px solid ${style.codeBorder}`,
@@ -245,23 +205,25 @@ export class Renderer {
       });
     });
 
-    // 移除原有的 class 避免被页面样式干扰（但保留结构信息）
     el.querySelectorAll("[class]").forEach((node) => {
-      // 只清除与原站相关的类名，保留我们自己的
       if (!node.className.startsWith?.("aig-")) {
         node.removeAttribute("class");
       }
     });
 
-    // 清理 SVG 图标按钮等非内容元素
     el.querySelectorAll('button, [role="button"]').forEach((btn) =>
       btn.remove(),
     );
+
+    // 约束图片尺寸
+    el.querySelectorAll("img").forEach((img) => {
+      Object.assign(img.style, {
+        maxWidth: "100%",
+        height: "auto",
+      });
+    });
   }
 
-  /**
-   * 等待容器内所有图片加载完成
-   */
   waitForImages(container) {
     const images = container.querySelectorAll("img");
     if (images.length === 0) return Promise.resolve();
@@ -271,7 +233,7 @@ export class Renderer {
         ? Promise.resolve()
         : new Promise((resolve) => {
             img.onload = resolve;
-            img.onerror = resolve; // 失败也继续
+            img.onerror = resolve;
           }),
     );
     return Promise.all(promises);

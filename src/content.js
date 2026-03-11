@@ -7,7 +7,6 @@ import { ConversationManager } from "./core/conversation-manager.js";
 import { Extractor } from "./core/extractor.js";
 import { StyleManager } from "./core/style-manager.js";
 import { Renderer } from "./core/renderer.js";
-import { CopyButton } from "./ui/copy-button.js";
 import { StylePicker } from "./ui/style-picker.js";
 
 (function aiGlanceInit() {
@@ -19,68 +18,45 @@ import { StylePicker } from "./ui/style-picker.js";
 
   console.log(`[AI Glance] 检测到 ${adapter.name}，正在初始化...`);
 
-  const extractor = new Extractor(adapter);
+  const extractor = new Extractor();
   const styleManager = new StyleManager();
   const renderer = new Renderer();
 
-  /** 执行复制流程 */
-  async function doCopy(responseEl, buttonEl, style) {
-    CopyButton.setState(buttonEl, "loading");
+  let pendingTurns = null;
 
-    try {
-      const content = await extractor.extract(responseEl);
-      if (!content) {
-        throw new Error("无法提取对话内容");
-      }
-
-      const blob = await renderer.render(content, style);
-
-      // 复制到剪贴板
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-
-      CopyButton.setState(buttonEl, "success");
-    } catch (err) {
-      console.error("[AI Glance] 复制失败:", err);
-      CopyButton.setState(buttonEl, "error");
-    }
+  function showToast(msg, isError = false) {
+    const toast = document.createElement("div");
+    toast.className = `aig-toast${isError ? " aig-toast-error" : ""}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
   }
 
-  // 当前正在操作的 response 和 button 引用
-  let pendingResponseEl = null;
-  let pendingButtonEl = null;
-
-  // 风格选择器（确认后执行复制）
   const stylePicker = new StylePicker(styleManager, (style) => {
-    if (pendingResponseEl && pendingButtonEl) {
-      doCopy(pendingResponseEl, pendingButtonEl, style);
-    }
-    pendingResponseEl = null;
-    pendingButtonEl = null;
+    if (!pendingTurns) return;
+    const turns = pendingTurns;
+    pendingTurns = null;
+
+    showToast("生成中...");
+
+    const turnHTMLs = extractor.extractTurns(turns);
+    renderer
+      .render(turnHTMLs, style)
+      .then((blob) =>
+        navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]),
+      )
+      .then(() => showToast("已复制到剪贴板"))
+      .catch(() => showToast("复制失败", true));
   });
 
-  // 复制按钮（点击后弹出风格选择器）
-  const copyButton = new CopyButton((responseEl, buttonEl) => {
-    pendingResponseEl = responseEl;
-    pendingButtonEl = buttonEl;
-    stylePicker.show(buttonEl);
+  const manager = new ConversationManager(adapter, {
+    onGenerate(selectedTurns) {
+      pendingTurns = selectedTurns;
+      const mainBtn = document.querySelector(".aig-main-btn");
+      stylePicker.show(mainBtn || document.body);
+    },
   });
 
-  // 注入按钮的回调
-  function injectButton(responseEl) {
-    const actionBar = adapter.getActionBar(responseEl);
-    if (actionBar) {
-      copyButton.inject(actionBar, responseEl);
-    } else {
-      // 没找到操作栏，直接在回复后面插入
-      copyButton.injectAfterResponse(responseEl);
-    }
-  }
-
-  // 启动对话管理器
-  const manager = new ConversationManager(adapter, injectButton);
   manager.start();
-
-  console.log("[AI Glance] 初始化完成，正在监控对话...");
+  console.log("[AI Glance] 初始化完成");
 })();

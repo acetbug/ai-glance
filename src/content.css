@@ -2,58 +2,214 @@
    AI Glance — 注入样式
    ======================================== */
 
-/* ── 复制按钮 ── */
-.aig-copy-btn {
+/* ── 顶部主按钮 ── */
+.aig-main-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+  background: rgba(74, 144, 217, 0.1);
+  color: #4a90d9;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  opacity: 0.7;
   transition: all 0.2s ease;
   font-family: -apple-system, "Segoe UI", sans-serif;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  margin: 8px;
 }
 
-.aig-copy-btn:hover {
-  opacity: 1;
-  background: rgba(128, 128, 128, 0.15);
+.aig-main-btn:hover {
+  background: rgba(74, 144, 217, 0.2);
+  border-color: #4a90d9;
 }
 
-.aig-copy-btn:active {
-  transform: scale(0.96);
+.aig-main-btn:active {
+  transform: scale(0.97);
 }
 
-.aig-copy-btn:disabled {
-  opacity: 0.4;
-  cursor: wait;
-}
-
-.aig-copy-btn svg {
+.aig-main-btn svg {
   flex-shrink: 0;
 }
 
-.aig-copy-btn.aig-loading .aig-copy-btn-text {
-  animation: aig-pulse 1s ease-in-out infinite;
+/* ── 选择模式：turn 选择框 ── */
+.aig-selectable {
+  position: relative;
+  cursor: pointer;
 }
 
-.aig-copy-btn.aig-success {
-  color: #22c55e;
+.aig-selectable::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  pointer-events: none;
+  transition: border-color 0.15s ease;
+  z-index: 10;
 }
 
-.aig-copy-btn.aig-error {
-  color: #ef4444;
+.aig-selected::before {
+  border-color: #4a90d9;
+  background: rgba(74, 144, 217, 0.05);
 }
 
-.aig-copy-btn-standalone {
+.aig-turn-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(128, 128, 128, 0.4);
+  background: #fff;
+  cursor: pointer;
+  z-index: 11;
   display: flex;
-  justify-content: flex-start;
-  padding: 6px 0;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.aig-turn-check:hover {
+  border-color: #4a90d9;
+}
+
+.aig-turn-check.aig-checked {
+  background: #4a90d9;
+  border-color: #4a90d9;
+}
+
+.aig-turn-check.aig-checked::after {
+  content: "";
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+/* ── 底部选择工具栏 ── */
+.aig-selection-toolbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  animation: aig-fadeIn 0.15s ease-out;
+}
+
+.aig-toolbar-count {
+  color: #6b7280;
+  font-size: 12px;
+  min-width: 60px;
+}
+
+.aig-toolbar-btn {
+  padding: 6px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.aig-toolbar-btn:hover {
+  background: #f3f4f6;
+}
+
+.aig-toolbar-primary {
+  background: #4a90d9;
+  color: #fff;
+  border-color: #4a90d9;
+}
+
+.aig-toolbar-primary:hover {
+  background: #3a7bc8;
+}
+
+/* ── Toast 提示 ── */
+.aig-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  padding: 10px 24px;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: aig-fadeIn 0.15s ease-out;
+}
+
+.aig-toast-error {
+  background: #ef4444;
+}
+
+/* 暗色模式适配 — 新增 UI */
+@media (prefers-color-scheme: dark) {
+  .aig-main-btn {
+    background: rgba(137, 180, 250, 0.1);
+    color: #89b4fa;
+    border-color: rgba(137, 180, 250, 0.3);
+  }
+  .aig-main-btn:hover {
+    background: rgba(137, 180, 250, 0.2);
+    border-color: #89b4fa;
+  }
+  .aig-turn-check {
+    background: #1e1e2e;
+    border-color: rgba(186, 194, 222, 0.4);
+  }
+  .aig-selection-toolbar {
+    background: #1e1e2e;
+    border-color: #45475a;
+    color: #cdd6f4;
+  }
+  .aig-toolbar-btn {
+    background: #313244;
+    border-color: #45475a;
+    color: #cdd6f4;
+  }
+  .aig-toolbar-btn:hover {
+    background: #45475a;
+  }
+  .aig-toolbar-primary {
+    background: #89b4fa !important;
+    color: #1e1e2e !important;
+  }
+  .aig-toolbar-primary:hover {
+    background: #74a8f7 !important;
+  }
+  .aig-selected::before {
+    border-color: #89b4fa;
+    background: rgba(137, 180, 250, 0.05);
+  }
 }
 
 /* ── 风格选择器弹出框 ── */

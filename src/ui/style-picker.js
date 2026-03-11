@@ -108,7 +108,7 @@ export class StylePicker {
 
     const confirmBtn = document.createElement("button");
     confirmBtn.className = "aig-confirm-btn";
-    confirmBtn.textContent = "确定复制";
+    confirmBtn.textContent = "确定生成";
     confirmBtn.addEventListener("click", async () => {
       const save = popover.querySelector(".aig-save-check").checked;
       if (save) {

@@ -9,7 +9,8 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "esbuild": "^0.20.0"
+    "esbuild": "^0.27.3",
+    "prettier": "^3.8.1"
   },
   "dependencies": {
     "html2canvas": "^1.4.1"
