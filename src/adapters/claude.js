@@ -1,19 +1,8 @@
-import { BaseAdapter } from "./base.js";
+const ClaudeAdapter = {
+  name: "claude",
+  urlPattern: new URLPattern("https://claude.ai/*"),
+  turnSelector: "[data-test-render-count]",
+  actionBarSelector: '[data-testid="wiggle-controls-actions"]',
+};
 
-export class ClaudeAdapter extends BaseAdapter {
-  get name() {
-    return "claude";
-  }
-
-  static matches(url) {
-    return /^https:\/\/claude\.ai/i.test(url);
-  }
-
-  get turnSelector() {
-    return '[data-test-render-count="1"]';
-  }
-
-  get actionBarSelector() {
-    return '[data-testid="wiggle-controls-actions"]';
-  }
-}
+export default ClaudeAdapter;

@@ -3,15 +3,21 @@
   "name": "AI Glance - AI对话截图",
   "version": "0.1.0",
   "description": "一键将AI对话导出为精美风格化图片",
-  "permissions": ["clipboardWrite", "storage"],
+  "permissions": ["clipboardWrite", "storage", "offscreen"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": [
         "https://chatgpt.com/*",
-        "https://chat.openai.com/*",
-        "https://gemini.google.com/*",
         "https://claude.ai/*",
-        "https://copilot.microsoft.com/*"
+        "https://chat.deepseek.com/*",
+        "https://www.doubao.com/*",
+        "https://gemini.google.com/*",
+        "https://grok.com/*",
+        "https://chat.qwen.ai/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
@@ -22,5 +28,11 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["offscreen.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

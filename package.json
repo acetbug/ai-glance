@@ -1,6 +1,6 @@
 {
   "name": "ai-glance",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "一键将AI对话导出为精美图片的浏览器扩展",
   "private": true,
   "scripts": {
@@ -9,10 +9,14 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "esbuild": "^0.27.3",
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^1.1.0",
+    "esbuild": "^0.27.4",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
     "prettier": "^3.8.1"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1"
+    "@zumer/snapdom": "^2.1.0"
   }
 }

@@ -1,30 +1,28 @@
-import { STYLE_PRESETS } from "../core/style-manager.js";
+import STYLE_PRESETS from "../styles/presets.js";
 
 /**
  * 风格选择器气泡组件
  * 点击复制按钮后弹出，选择风格后执行复制
  */
-export class StylePicker {
+export default class StylePicker {
   /**
-   * @param {import('../core/style-manager.js').StyleManager} styleManager
-   * @param {(style: object) => void} onConfirm 确认选择后的回调
+   * @param {(style: object, save: boolean) => void} onConfirm 确认选择后的回调
    */
-  constructor(styleManager, onConfirm) {
-    this.styleManager = styleManager;
+  constructor(onConfirm) {
     this.onConfirm = onConfirm;
     this._popover = null;
     this._closeHandler = null;
+    this._closeTimer = null;
   }
 
   /**
    * 在按钮附近弹出风格选择器
    * @param {Element} anchorEl 锚点元素（按钮）
+   * @param {object} currentStyle 当前风格
    */
-  async show(anchorEl) {
+  show(anchorEl, currentStyle) {
     // 关闭已有弹出
     this.hide();
-
-    const currentStyle = await this.styleManager.getCurrentStyle();
 
     const popover = document.createElement("div");
     popover.className = "aig-style-picker";
@@ -111,11 +109,8 @@ export class StylePicker {
     confirmBtn.textContent = "确定生成";
     confirmBtn.addEventListener("click", async () => {
       const save = popover.querySelector(".aig-save-check").checked;
-      if (save) {
-        await this.styleManager.saveStyle(this._selectedStyle);
-      }
       this.hide();
-      this.onConfirm(this._selectedStyle);
+      this.onConfirm(this._selectedStyle, save);
     });
     footer.appendChild(confirmBtn);
     popover.appendChild(footer);
@@ -134,7 +129,12 @@ export class StylePicker {
         this.hide();
       }
     };
-    setTimeout(() => document.addEventListener("click", this._closeHandler), 0);
+    this._closeTimer = setTimeout(() => {
+      this._closeTimer = null;
+      if (this._closeHandler) {
+        document.addEventListener("click", this._closeHandler);
+      }
+    }, 0);
   }
 
   /** 创建预设卡片 */
@@ -188,6 +188,10 @@ export class StylePicker {
 
   /** 隐藏弹出 */
   hide() {
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
     if (this._popover) {
       this._popover.remove();
       this._popover = null;

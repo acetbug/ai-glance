@@ -1,19 +1,8 @@
-import { BaseAdapter } from "./base.js";
+const GeminiAdapter = {
+  name: "gemini",
+  urlPattern: new URLPattern("https://gemini.google.com/*"),
+  turnSelector: ".query-text, .response-content",
+  actionBarSelector: "top-bar-actions .right-section",
+};
 
-export class GeminiAdapter extends BaseAdapter {
-  get name() {
-    return "gemini";
-  }
-
-  static matches(url) {
-    return /^https:\/\/gemini\.google\.com/i.test(url);
-  }
-
-  get turnSelector() {
-    return ".query-text, .response-content";
-  }
-
-  get actionBarSelector() {
-    return "top-bar-actions .right-section";
-  }
-}
+export default GeminiAdapter;

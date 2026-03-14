@@ -24,22 +24,37 @@ function copyStatic() {
 
 copyStatic();
 
-const buildOptions = {
-  entryPoints: ["src/content.js"],
+const baseBuildOptions = {
   bundle: true,
-  outfile: path.join(distDir, "content.js"),
-  format: "iife",
   target: ["chrome110"],
   minify: !isWatch,
   sourcemap: isWatch ? "inline" : false,
 };
 
+const contentBuildOptions = {
+  ...baseBuildOptions,
+  entryPoints: ["src/content.js"],
+  outfile: path.join(distDir, "content.js"),
+  format: "iife",
+};
+
+const moduleBuildOptions = {
+  ...baseBuildOptions,
+  entryPoints: ["src/background.js", "src/offscreen.js"],
+  outdir: distDir,
+  format: "esm",
+};
+
 if (isWatch) {
-  const ctx = await esbuild.context(buildOptions);
-  await ctx.watch();
+  const contentCtx = await esbuild.context(contentBuildOptions);
+  const moduleCtx = await esbuild.context(moduleBuildOptions);
+  await contentCtx.watch();
+  await moduleCtx.watch();
+  fs.copyFileSync("src/offscreen.html", path.join(distDir, "offscreen.html"));
   console.log("Watching for changes...");
 } else {
-  await esbuild.build(buildOptions);
+  await esbuild.build(contentBuildOptions);
+  await esbuild.build(moduleBuildOptions);
 
   // Bundle CSS
   const cssFiles = ["src/content.css"];
@@ -48,6 +63,7 @@ if (isWatch) {
     .map((f) => fs.readFileSync(f, "utf-8"))
     .join("\n");
   fs.writeFileSync(path.join(distDir, "content.css"), cssContent);
+  fs.copyFileSync("src/offscreen.html", path.join(distDir, "offscreen.html"));
 
   console.log("Build complete → dist/");
 }
