@@ -143,16 +143,16 @@
   content: "";
   position: absolute;
   inset: 0;
-  border: 2px solid transparent;
+  border: 2px solid var(--aig-border-subtle);
   border-radius: var(--aig-radius-md);
   pointer-events: none;
   transition: all var(--aig-transition-fast);
   z-index: 10;
-  opacity: 0;
+  opacity: 0.8;
 }
 
 .aig-selectable:hover::before {
-  border-color: var(--aig-border-subtle);
+  border-color: var(--aig-primary);
   opacity: 1;
 }
 
@@ -170,10 +170,10 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--aig-radius-sm);
-  border: 2px solid var(--aig-border-subtle);
+  border: 2px solid var(--aig-primary);
   background: var(--aig-bg-surface);
   cursor: pointer;
   z-index: 11;
@@ -181,19 +181,19 @@
   align-items: center;
   justify-content: center;
   transition: all var(--aig-transition-fast);
-  box-shadow: var(--aig-shadow-sm);
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.aig-selectable:hover .aig-turn-check {
+  box-shadow: var(--aig-shadow-md);
   opacity: 1;
   transform: scale(1);
 }
 
 .aig-turn-check:hover {
-  border-color: var(--aig-primary);
-  transform: scale(1.05);
+  border-color: var(--aig-primary-hover);
+  transform: scale(1.1);
+  box-shadow: var(--aig-shadow-lg);
+}
+
+.aig-turn-check:active {
+  transform: scale(0.95);
 }
 
 .aig-turn-check.aig-checked {
