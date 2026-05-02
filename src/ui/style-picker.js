@@ -1,125 +1,47 @@
 import STYLE_PRESETS from "../styles/presets.js";
 
-/**
- * 风格选择器气泡组件
- * 点击复制按钮后弹出，选择风格后执行复制
- */
+const TABS = [
+  { id: "style", label: "风格" },
+  { id: "config", label: "配置" },
+];
+
 export default class StylePicker {
   /**
-   * @param {(style: object, save: boolean) => void} onConfirm 确认选择后的回调
+   * @param {(style: object, config: object, save: boolean) => void} onConfirm 确认选择后的回调
    */
   constructor(onConfirm) {
     this.onConfirm = onConfirm;
     this._popover = null;
     this._closeHandler = null;
     this._closeTimer = null;
+    this._selectedStyle = null;
+    this._exportConfig = null;
+    this._activeTab = "style";
   }
 
   /**
    * 在按钮附近弹出风格选择器
    * @param {Element} anchorEl 锚点元素（按钮）
    * @param {object} currentStyle 当前风格
+   * @param {object} exportConfig 当前导出配置
    */
-  show(anchorEl, currentStyle) {
-    // 关闭已有弹出
+  show(anchorEl, currentStyle, exportConfig = {}) {
     this.hide();
 
     const popover = document.createElement("div");
     popover.className = "aig-style-picker";
     this._popover = popover;
-
-    // ── 标题栏 ──
-    const header = document.createElement("div");
-    header.className = "aig-picker-header";
-    header.innerHTML = `
-      <span class="aig-picker-title">选择图片风格</span>
-      <button class="aig-picker-close" title="关闭">&times;</button>
-    `;
-    popover.appendChild(header);
-    header
-      .querySelector(".aig-picker-close")
-      .addEventListener("click", () => this.hide());
-
-    // ── 预设列表 ──
-    const presetGrid = document.createElement("div");
-    presetGrid.className = "aig-preset-grid";
-
-    for (const preset of Object.values(STYLE_PRESETS)) {
-      const card = this.createPresetCard(preset, currentStyle.id === preset.id);
-      card.addEventListener("click", () => {
-        // 更新选中状态
-        presetGrid
-          .querySelectorAll(".aig-preset-card")
-          .forEach((c) => c.classList.remove("aig-selected"));
-        card.classList.add("aig-selected");
-        this._selectedStyle = { ...preset };
-        this.updateCustomInputs(popover, preset);
-      });
-      presetGrid.appendChild(card);
-    }
-    popover.appendChild(presetGrid);
-
-    // ── 自定义颜色区 ──
-    const customSection = document.createElement("div");
-    customSection.className = "aig-custom-section";
-    customSection.innerHTML = `
-      <div class="aig-custom-title">自定义颜色</div>
-      <div class="aig-custom-row">
-        <label>背景 <input type="color" data-prop="bg" value="${currentStyle.bg}"></label>
-        <label>文字 <input type="color" data-prop="text" value="${currentStyle.text}"></label>
-        <label>强调 <input type="color" data-prop="accent" value="${currentStyle.accent}"></label>
-      </div>
-      <div class="aig-custom-row">
-        <label>Prompt背景 <input type="color" data-prop="promptBg" value="${currentStyle.promptBg}"></label>
-        <label>代码背景 <input type="color" data-prop="codeBg" value="${currentStyle.codeBg}"></label>
-        <label>代码文字 <input type="color" data-prop="codeText" value="${currentStyle.codeText}"></label>
-      </div>
-    `;
-    popover.appendChild(customSection);
-
-    // 自定义颜色变化监听
-    customSection.querySelectorAll('input[type="color"]').forEach((input) => {
-      input.addEventListener("input", () => {
-        const prop = input.dataset.prop;
-        if (!this._selectedStyle) {
-          this._selectedStyle = { ...currentStyle };
-        }
-        this._selectedStyle[prop] = input.value;
-        this._selectedStyle.id = "custom";
-        // 取消预设选中
-        presetGrid
-          .querySelectorAll(".aig-preset-card")
-          .forEach((c) => c.classList.remove("aig-selected"));
-      });
-    });
-
     this._selectedStyle = { ...currentStyle };
+    this._exportConfig = { ...exportConfig };
 
-    // ── 底部按钮 ──
-    const footer = document.createElement("div");
-    footer.className = "aig-picker-footer";
+    this._renderHeader(popover);
+    this._renderTabs(popover);
+    this._renderTabContent(popover);
+    this._renderFooter(popover);
 
-    const saveLabel = document.createElement("label");
-    saveLabel.className = "aig-save-label";
-    saveLabel.innerHTML = `<input type="checkbox" checked class="aig-save-check"> 保存为默认`;
-    footer.appendChild(saveLabel);
-
-    const confirmBtn = document.createElement("button");
-    confirmBtn.className = "aig-confirm-btn";
-    confirmBtn.textContent = "确定生成";
-    confirmBtn.addEventListener("click", async () => {
-      const save = popover.querySelector(".aig-save-check").checked;
-      this.hide();
-      this.onConfirm(this._selectedStyle, save);
-    });
-    footer.appendChild(confirmBtn);
-    popover.appendChild(footer);
-
-    // ── 定位 ──
     document.body.appendChild(popover);
     this.position(popover, anchorEl);
 
-    // 点击外部关闭
     this._closeHandler = (e) => {
       if (
         !popover.contains(e.target) &&
@@ -137,7 +59,281 @@ export default class StylePicker {
     }, 0);
   }
 
-  /** 创建预设卡片 */
+  _renderHeader(popover) {
+    const header = document.createElement("div");
+    header.className = "aig-picker-header";
+    header.innerHTML = `
+      <span class="aig-picker-title">导出设置</span>
+      <button class="aig-picker-close" title="关闭">&times;</button>
+    `;
+    popover.appendChild(header);
+
+    header
+      .querySelector(".aig-picker-close")
+      .addEventListener("click", () => this.hide());
+  }
+
+  _renderTabs(popover) {
+    const tabsContainer = document.createElement("div");
+    tabsContainer.className = "aig-picker-tabs";
+
+    TABS.forEach((tab) => {
+      const btn = document.createElement("button");
+      btn.className = `aig-tab-btn${tab.id === this._activeTab ? " aig-tab-active" : ""}`;
+      btn.dataset.tab = tab.id;
+      btn.textContent = tab.label;
+      btn.addEventListener("click", () => this._switchTab(tab.id));
+      tabsContainer.appendChild(btn);
+    });
+
+    popover.appendChild(tabsContainer);
+  }
+
+  _renderTabContent(popover) {
+    const styleContent = document.createElement("div");
+    styleContent.className = `aig-tab-content aig-tab-visible`;
+    styleContent.dataset.tab = "style";
+    this._renderStyleTab(styleContent);
+    popover.appendChild(styleContent);
+
+    const configContent = document.createElement("div");
+    configContent.className = "aig-tab-content";
+    configContent.dataset.tab = "config";
+    this._renderConfigTab(configContent);
+    popover.appendChild(configContent);
+  }
+
+  _renderStyleTab(container) {
+    const presetGrid = document.createElement("div");
+    presetGrid.className = "aig-preset-grid";
+
+    for (const preset of Object.values(STYLE_PRESETS)) {
+      const card = this.createPresetCard(
+        preset,
+        this._selectedStyle.id === preset.id,
+      );
+      card.addEventListener("click", () => {
+        presetGrid
+          .querySelectorAll(".aig-preset-card")
+          .forEach((c) => c.classList.remove("aig-selected"));
+        card.classList.add("aig-selected");
+        this._selectedStyle = { ...preset };
+      });
+      presetGrid.appendChild(card);
+    }
+    container.appendChild(presetGrid);
+
+    const customSection = document.createElement("div");
+    customSection.className = "aig-custom-section";
+    customSection.innerHTML = `
+      <div class="aig-custom-title">自定义颜色</div>
+      <div class="aig-custom-row">
+        <div class="aig-color-item">
+          <label>
+            <input type="color" data-prop="bg" value="${this._selectedStyle.bg}">
+            背景
+          </label>
+        </div>
+        <div class="aig-color-item">
+          <label>
+            <input type="color" data-prop="text" value="${this._selectedStyle.text}">
+            文字
+          </label>
+        </div>
+        <div class="aig-color-item">
+          <label>
+            <input type="color" data-prop="accent" value="${this._selectedStyle.accent}">
+            强调
+          </label>
+        </div>
+      </div>
+      <div class="aig-custom-row">
+        <div class="aig-color-item">
+          <label>
+            <input type="color" data-prop="promptBg" value="${this._selectedStyle.promptBg}">
+            Prompt背景
+          </label>
+        </div>
+        <div class="aig-color-item">
+          <label>
+            <input type="color" data-prop="codeBg" value="${this._selectedStyle.codeBg}">
+            代码背景
+          </label>
+        </div>
+        <div class="aig-color-item">
+          <label>
+            <input type="color" data-prop="codeText" value="${this._selectedStyle.codeText}">
+            代码文字
+          </label>
+        </div>
+      </div>
+    `;
+    container.appendChild(customSection);
+
+    customSection.querySelectorAll('input[type="color"]').forEach((input) => {
+      input.addEventListener("input", () => {
+        const prop = input.dataset.prop;
+        this._selectedStyle[prop] = input.value;
+        this._selectedStyle.id = "custom";
+        presetGrid
+          .querySelectorAll(".aig-preset-card")
+          .forEach((c) => c.classList.remove("aig-selected"));
+      });
+    });
+  }
+
+  _renderConfigTab(container) {
+    const configSection = document.createElement("div");
+    configSection.className = "aig-config-section";
+    configSection.innerHTML = `
+      <div class="aig-config-group">
+        <label class="aig-config-label">导出尺寸</label>
+        <div class="aig-config-row">
+          <select class="aig-config-select" data-prop="width">
+            <option value="360">窄 (360px)</option>
+            <option value="420" selected>标准 (420px)</option>
+            <option value="480">宽 (480px)</option>
+            <option value="600">超宽 (600px)</option>
+          </select>
+        </div>
+      </div>
+      <div class="aig-config-group">
+        <label class="aig-config-label">渲染画质</label>
+        <div class="aig-config-row">
+          <select class="aig-config-select" data-prop="scale">
+            <option value="1">标准 (1x)</option>
+            <option value="2" selected>高清 (2x)</option>
+            <option value="3">超清 (3x)</option>
+          </select>
+        </div>
+      </div>
+      <div class="aig-config-group">
+        <label class="aig-config-label">水印设置</label>
+        <label class="aig-config-checkbox">
+          <input type="checkbox" data-prop="watermarkEnabled" ${this._exportConfig.watermarkEnabled !== false ? "checked" : ""}>
+          <span>显示水印</span>
+        </label>
+        <div class="aig-config-row" style="margin-top: 8px;">
+          <input type="text" class="aig-config-input" data-prop="watermark" 
+                 value="${this._exportConfig.watermark || 'AI Glance'}" 
+                 placeholder="水印文字">
+        </div>
+      </div>
+      <div class="aig-config-group">
+        <label class="aig-config-label">标题设置</label>
+        <label class="aig-config-checkbox">
+          <input type="checkbox" data-prop="titleEnabled" ${this._exportConfig.titleEnabled ? "checked" : ""}>
+          <span>添加标题</span>
+        </label>
+        <div class="aig-config-row" style="margin-top: 8px;">
+          <input type="text" class="aig-config-input" data-prop="title" 
+                 value="${this._exportConfig.title || ''}" 
+                 placeholder="例如：与AI的精彩对话">
+        </div>
+      </div>
+    `;
+    container.appendChild(configSection);
+
+    configSection.querySelectorAll("[data-prop]").forEach((el) => {
+      const prop = el.dataset.prop;
+      const isCheckbox = el.type === "checkbox";
+      const isSelect = el.tagName === "SELECT";
+
+      el.addEventListener("change", () => {
+        if (isCheckbox) {
+          this._exportConfig[prop] = el.checked;
+        } else if (isSelect) {
+          this._exportConfig[prop] = parseInt(el.value) || el.value;
+        }
+      });
+
+      if (!isCheckbox && !isSelect) {
+        el.addEventListener("input", () => {
+          this._exportConfig[prop] = el.value;
+        });
+      }
+    });
+  }
+
+  _renderFooter(popover) {
+    const footer = document.createElement("div");
+    footer.className = "aig-picker-footer";
+
+    const leftActions = document.createElement("div");
+    leftActions.style.display = "flex";
+    leftActions.style.gap = "12px";
+    leftActions.style.alignItems = "center";
+
+    const saveLabel = document.createElement("label");
+    saveLabel.className = "aig-save-label";
+    saveLabel.innerHTML = `<input type="checkbox" checked class="aig-save-check"> 保存为默认`;
+    leftActions.appendChild(saveLabel);
+
+    const shareBtn = document.createElement("button");
+    shareBtn.className = "aig-theme-toggle";
+    shareBtn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="5" r="3"/>
+        <circle cx="6" cy="12" r="3"/>
+        <circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+      分享
+    `;
+    shareBtn.addEventListener("click", () => this._shareStyle());
+    leftActions.appendChild(shareBtn);
+
+    footer.appendChild(leftActions);
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.className = "aig-confirm-btn";
+    confirmBtn.textContent = "确定生成";
+    confirmBtn.addEventListener("click", async () => {
+      const save = popover.querySelector(".aig-save-check").checked;
+      this.hide();
+      this.onConfirm(this._selectedStyle, this._exportConfig, save);
+    });
+    footer.appendChild(confirmBtn);
+
+    popover.appendChild(footer);
+  }
+
+  _switchTab(tabId) {
+    this._activeTab = tabId;
+
+    this._popover.querySelectorAll(".aig-tab-btn").forEach((btn) => {
+      btn.classList.toggle(
+        "aig-tab-active",
+        btn.dataset.tab === tabId,
+      );
+    });
+
+    this._popover.querySelectorAll(".aig-tab-content").forEach((content) => {
+      content.classList.toggle(
+        "aig-tab-visible",
+        content.dataset.tab === tabId,
+      );
+    });
+  }
+
+  _shareStyle() {
+    const shareData = {
+      style: this._selectedStyle,
+      config: this._exportConfig,
+      version: "1.0",
+    };
+
+    try {
+      const json = JSON.stringify(shareData, null, 2);
+      navigator.clipboard.writeText(json);
+      alert("风格配置已复制到剪贴板！\n分享给好友后，他们可以粘贴导入。");
+    } catch (err) {
+      console.error("Share failed:", err);
+      alert("分享失败，请手动复制：\n\n" + JSON.stringify(shareData));
+    }
+  }
+
   createPresetCard(preset, isSelected) {
     const card = document.createElement("div");
     card.className = `aig-preset-card${isSelected ? " aig-selected" : ""}`;
@@ -153,15 +349,6 @@ export default class StylePicker {
     return card;
   }
 
-  /** 更新自定义输入框值 */
-  updateCustomInputs(popover, style) {
-    popover.querySelectorAll('input[type="color"]').forEach((input) => {
-      const prop = input.dataset.prop;
-      if (style[prop]) input.value = style[prop];
-    });
-  }
-
-  /** 定位弹出框 */
   position(popover, anchor) {
     const rect = anchor.getBoundingClientRect();
     const popRect = popover.getBoundingClientRect();
@@ -169,24 +356,20 @@ export default class StylePicker {
     let top = rect.top - popRect.height - 8;
     let left = rect.left;
 
-    // 如果上方放不下，放下方
     if (top < 10) {
       top = rect.bottom + 8;
     }
 
-    // 如果右侧超出视口
     if (left + popRect.width > window.innerWidth - 10) {
       left = window.innerWidth - popRect.width - 10;
     }
 
-    // 如果左侧超出
     if (left < 10) left = 10;
 
     popover.style.top = `${top}px`;
     popover.style.left = `${left}px`;
   }
 
-  /** 隐藏弹出 */
   hide() {
     if (this._closeTimer) {
       clearTimeout(this._closeTimer);
