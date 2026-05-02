@@ -21,4 +21,12 @@ export default class MainButton {
   attachTo(parent) {
     parent.prepend(this.button);
   }
+
+  setActive(active) {
+    this.button.classList.toggle("aig-active", active);
+  }
+
+  isActive() {
+    return this.button.classList.contains("aig-active");
+  }
 }

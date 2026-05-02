@@ -6,15 +6,17 @@
  * 添加新的样式规则只需在此文件追加条目，无需修改应用逻辑。
  */
 
-const CONTAINER_WIDTH = 420;
+const DEFAULT_CONTAINER_WIDTH = 420;
 
-export default function buildStyleRules(s) {
+export default function buildStyleRules(s, config = {}) {
+  const containerWidth = config.width || DEFAULT_CONTAINER_WIDTH;
+
   return [
     // ── 容器 ──
     {
       selector: ".aig-container",
       styles: {
-        width: `${CONTAINER_WIDTH}px`,
+        width: `${containerWidth}px`,
         background: s.bg,
         color: s.text,
         fontFamily: s.fontFamily,
@@ -23,6 +25,20 @@ export default function buildStyleRules(s) {
         padding: s.padding,
         borderRadius: s.borderRadius,
         overflow: "visible",
+      },
+    },
+    // ── 标题 ──
+    {
+      selector: ".aig-title",
+      styles: {
+        fontSize: "20px",
+        fontWeight: "700",
+        color: s.text,
+        marginBottom: "20px",
+        paddingBottom: "16px",
+        borderBottom: `2px solid ${s.accent}`,
+        textAlign: "center",
+        letterSpacing: "0.5px",
       },
     },
     // ── 分隔线 ──
@@ -51,7 +67,49 @@ export default function buildStyleRules(s) {
     { selector: "p", styles: { margin: "0 0 12px 0" } },
     { selector: "ul,ol", styles: { paddingLeft: "24px", margin: "8px 0" } },
     { selector: "li", styles: { margin: "4px 0" } },
-    { selector: "img", styles: { maxWidth: "100%", height: "auto" } },
+    {
+      selector: "img",
+      styles: {
+        maxWidth: "100%",
+        height: "auto",
+        display: "block",
+        margin: "12px 0",
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      },
+    },
+    {
+      selector: "picture",
+      styles: {
+        display: "block",
+        margin: "12px 0",
+      },
+    },
+    {
+      selector: "svg",
+      styles: {
+        maxWidth: "100%",
+        height: "auto",
+        display: "block",
+        margin: "12px 0",
+      },
+    },
+    {
+      selector: "figure",
+      styles: {
+        margin: "16px 0",
+        textAlign: "center",
+      },
+    },
+    {
+      selector: "figcaption",
+      styles: {
+        fontSize: "12px",
+        color: s.text,
+        opacity: "0.7",
+        marginTop: "8px",
+      },
+    },
     // ── 主题驱动 ──
     {
       selector: "h1,h2,h3,h4,h5,h6",
@@ -121,6 +179,7 @@ export default function buildStyleRules(s) {
         padding: "8px 12px",
         fontWeight: "600",
         textAlign: "left",
+        color: s.text,
       },
     },
     {
@@ -128,6 +187,105 @@ export default function buildStyleRules(s) {
       styles: {
         border: `1px solid ${s.codeBorder}`,
         padding: "8px 12px",
+        color: s.text,
+      },
+    },
+    {
+      selector: "hr",
+      styles: {
+        border: "none",
+        height: "1px",
+        background: s.codeBorder,
+        margin: "20px 0",
+      },
+    },
+    {
+      selector: "br",
+      styles: {
+        lineHeight: "inherit",
+      },
+    },
+    {
+      selector: "strong",
+      styles: {
+        fontWeight: "700",
+      },
+    },
+    {
+      selector: "em",
+      styles: {
+        fontStyle: "italic",
+      },
+    },
+    {
+      selector: "del",
+      styles: {
+        textDecoration: "line-through",
+        opacity: "0.6",
+      },
+    },
+    {
+      selector: "mark",
+      styles: {
+        background: s.accent,
+        color: s.bg,
+        padding: "2px 4px",
+        borderRadius: "3px",
+      },
+    },
+    {
+      selector: "sub",
+      styles: {
+        fontSize: "0.75em",
+        verticalAlign: "sub",
+      },
+    },
+    {
+      selector: "sup",
+      styles: {
+        fontSize: "0.75em",
+        verticalAlign: "super",
+      },
+    },
+    {
+      selector: "details",
+      styles: {
+        margin: "12px 0",
+      },
+    },
+    {
+      selector: "summary",
+      styles: {
+        cursor: "pointer",
+        fontWeight: "500",
+        color: s.accent,
+      },
+    },
+    {
+      selector: "kbd",
+      styles: {
+        background: s.codeBg,
+        color: s.codeText,
+        border: `1px solid ${s.codeBorder}`,
+        borderRadius: "4px",
+        padding: "2px 6px",
+        fontSize: "12px",
+        fontFamily: '"Fira Code", Consolas, monospace',
+        boxShadow: `0 1px 0 ${s.codeBorder}`,
+      },
+    },
+    {
+      selector: "samp",
+      styles: {
+        fontFamily: '"Fira Code", Consolas, monospace',
+        color: s.codeText,
+      },
+    },
+    {
+      selector: "var",
+      styles: {
+        fontStyle: "italic",
+        color: s.accent,
       },
     },
   ];
