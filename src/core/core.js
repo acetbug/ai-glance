@@ -2,17 +2,20 @@ import AdapterManager from "../adapters/manager.js";
 import ChatGPTAdapter from "../adapters/chatgpt.js";
 import ClaudeAdapter from "../adapters/claude.js";
 import { cloneAndClean, enterSelection, exitSelection } from "./runtime.js";
+import ConfigManager from "./config.js";
 import DeepSeekAdapter from "../adapters/deepseek.js";
 import DoubaoAdapter from "../adapters/doubao.js";
+import ExportPanel from "../ui/export-panel.js";
 import GeminiAdapter from "../adapters/gemini.js";
 import GrokAdapter from "../adapters/grok.js";
 import MainButton from "../ui/main-button.js";
+import ProgressOverlay from "../ui/progress.js";
 import QwenAdapter from "../adapters/qwen.js";
-import render from "../render/renderer.js";
-import showToast from "../ui/toast.js";
+import render, { renderWithProgress } from "../render/renderer.js";
+import showToast, { showError, showSuccess, showWarning } from "../ui/toast.js";
 import StyleManager from "../styles/manager.js";
 import StylePicker from "../ui/style-picker.js";
-import stylize from "../styles/stylizer.js";
+import stylize, { createExportFilename, estimateDimensions } from "../styles/stylizer.js";
 import Toolbar from "../ui/toolbar.js";
 
 export default class Core {
@@ -27,6 +30,7 @@ export default class Core {
       QwenAdapter,
     );
     this.styleManager = new StyleManager();
+    this.configManager = new ConfigManager();
     this.mainButton = new MainButton(this.onClickMainButton.bind(this));
     this.toolbar = new Toolbar(
       this.getSelectedCount.bind(this),
@@ -35,16 +39,27 @@ export default class Core {
       this.onCancelToolbar.bind(this),
     );
     this.stylePicker = new StylePicker(this.onConfirmStylePicker.bind(this));
+    this.progress = new ProgressOverlay();
+    this.exportPanel = new ExportPanel();
+
     this._selectionMode = false;
     this._pendingTurns = [];
     this._isGenerating = false;
     this._mainButtonObserver = null;
     this._ensureButtonQueued = false;
+    this._lastGeneratedBlob = null;
+    this._lastGeneratedConfig = null;
   }
 
-  init() {
+  async init() {
     if (!this.adapterManager.detect()) return;
     if (this._mainButtonObserver) return;
+
+    try {
+      await this.configManager.initTheme();
+    } catch (e) {
+      console.warn("Theme initialization failed:", e);
+    }
 
     this.ensureMainButton();
     this._mainButtonObserver = new MutationObserver(() => {
@@ -71,6 +86,7 @@ export default class Core {
     );
 
     this.toolbar.show();
+    this.mainButton.setActive(true);
   }
 
   exitSelectionMode() {
@@ -79,32 +95,112 @@ export default class Core {
     const turns = document.querySelectorAll(".aig-selectable");
     turns.forEach(exitSelection);
     this.toolbar.hide();
+    this.mainButton.setActive(false);
   }
 
-  async generate(turns, style) {
+  async generate(turns, style, exportConfig) {
     if (this._isGenerating) {
-      showToast("正在生成，请稍候……");
+      showWarning("正在生成，请稍候……");
       return;
     }
+
     this._isGenerating = true;
-    showToast("生成中……");
+    this.progress.show("正在生成图片...", () =>
+      this.retryLastGeneration(),
+    );
 
     try {
-      // 先让 toast 渲染出来，避免用户感知“卡住”
       await new Promise((r) => requestAnimationFrame(r));
 
+      this.progress.update(20, "处理选中内容...");
+
       const nodes = turns.map(cloneAndClean);
-      const container = stylize(nodes, style);
-      const blob = await render(container);
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-      showToast("已复制到剪贴板");
-    } catch {
-      showToast("复制失败", true);
+
+      this.progress.update(40, "应用样式配置...");
+
+      const effectiveConfig = {
+        ...exportConfig,
+        watermark: exportConfig.watermarkEnabled
+          ? exportConfig.watermark
+          : undefined,
+      };
+
+      const container = stylize(nodes, style, effectiveConfig);
+
+      this.progress.update(60, "渲染图片...");
+
+      const blob = await renderWithProgress(container, {
+        scale: exportConfig.scale || 2,
+        onProgress: (percent, stage) => {
+          this.progress.update(60 + percent * 0.3, stage);
+        },
+      });
+
+      if (!blob || blob.size === 0) {
+        throw new Error("生成的图片为空");
+      }
+
+      this._lastGeneratedBlob = blob;
+      this._lastGeneratedConfig = {
+        style: { ...style },
+        exportConfig: { ...exportConfig },
+        turnsCount: turns.length,
+      };
+
+      this.progress.update(100, "完成！");
+
+      await this.configManager.addHistory({
+        styleName: style.name || style.id,
+        turnCount: turns.length,
+        timestamp: Date.now(),
+        config: { ...exportConfig },
+      });
+
+      this.progress.hide();
+
+      const filename = createExportFilename(style, exportConfig);
+      const dimensions = estimateDimensions(turns.length, exportConfig);
+
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        showSuccess("已复制到剪贴板");
+      } catch (clipboardErr) {
+        console.warn("Clipboard copy failed:", clipboardErr);
+        showWarning("图片已生成，点击下载按钮保存");
+      }
+
+      this.exportPanel.show(blob, this.mainButton.button, {
+        filename,
+        dimensions: {
+          width: dimensions.width,
+          height: dimensions.height,
+        },
+      });
+    } catch (error) {
+      console.error("Generation error:", error);
+      this.progress.showError(
+        error.message || "生成失败，请重试",
+        () => this.retryLastGeneration(),
+      );
     } finally {
       this._isGenerating = false;
     }
+  }
+
+  retryLastGeneration() {
+    if (!this._lastGeneratedConfig) {
+      showError("没有可重试的操作");
+      return;
+    }
+
+    this.progress.hide();
+    this.generate(
+      this._pendingTurns,
+      this._lastGeneratedConfig.style,
+      this._lastGeneratedConfig.exportConfig,
+    );
   }
 
   ensureMainButton() {
@@ -133,25 +229,36 @@ export default class Core {
     });
   }
 
-  onConfirmToolbar() {
+  async onConfirmToolbar() {
     this._pendingTurns = Array.from(
       document.querySelectorAll(".aig-turn-check.aig-checked"),
     ).map((check) => check.parentElement);
-    if (this._pendingTurns.length === 0) return;
+    if (this._pendingTurns.length === 0) {
+      showWarning("请先选择要导出的对话轮次");
+      return;
+    }
     this.exitSelectionMode();
-    this.styleManager.getCurrentStyle().then((style) => {
-      this.stylePicker.show(this.mainButton.button, style);
-    });
+
+    const [style, exportConfig] = await Promise.all([
+      this.styleManager.getCurrentStyle(),
+      this.configManager.getExportConfig(),
+    ]);
+
+    this.stylePicker.show(this.mainButton.button, style, exportConfig);
   }
 
   onCancelToolbar() {
     this.exitSelectionMode();
   }
 
-  onConfirmStylePicker(style, save) {
-    if (save) this.styleManager.saveStyle(style);
+  onConfirmStylePicker(style, exportConfig, save) {
+    if (save) {
+      this.styleManager.saveStyle(style);
+      this.configManager.saveExportConfig(exportConfig);
+    }
+
     const turns = this._pendingTurns;
     this._pendingTurns = [];
-    this.generate(turns, style);
+    this.generate(turns, style, exportConfig);
   }
 }
